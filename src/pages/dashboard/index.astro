@@ -1,0 +1,82 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import '../../styles/global.css';
+
+export const prerender = false;
+
+// Protect the route
+// 1. TEMPORARILY COMMENT THIS OUT:
+if (!Astro.locals.user?.id) return Astro.redirect("/sign-in");
+
+// 2. MOCK THE USER DATA:
+// const user = {
+//   id: "user_123456789",
+//   name: "Alex Developer",
+//   email: "alex@example.com",
+//   image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
+//   emailVerified: true,
+//   createdAt: new Date()
+// };
+
+const user = Astro.locals.user;
+---
+
+<Layout title="Dashboard">
+  <main class="relative z-10 w-full flex flex-col items-center pt-24 pb-20 px-4">
+    
+    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      
+      <div class="bg-slate-50 border-b border-gray-100 p-8 flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">User Dashboard</h1>
+          <p class="text-sm text-gray-500">Manage your account and view profile data</p>
+        </div>
+        <button 
+          id="signOutButton"
+          class="px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors active:scale-95"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      <div class="p-8">
+        <div class="mb-6">
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Profile Information</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div class="p-4 bg-slate-50 rounded-xl border border-gray-100">
+                <span class="block text-xs text-gray-500">Full Name</span>
+                <span class="text-gray-900 font-medium">{user.name}</span>
+             </div>
+             <div class="p-4 bg-slate-50 rounded-xl border border-gray-100">
+                <span class="block text-xs text-gray-500">Email Address</span>
+                <span class="text-gray-900 font-medium">{user.email}</span>
+             </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Raw Session Data</h2>
+          <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+            <pre class="text-green-400 text-xs font-mono">{JSON.stringify(user, null, 2)}</pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    import { authClient } from "../../lib/auth-client"; 
+    
+    document 
+      .getElementById("signOutButton") 
+      ?.addEventListener("click", async () => {
+        const btn = document.getElementById("signOutButton") as HTMLButtonElement;
+        btn.disabled = true;
+        btn.innerText = "Signing out...";
+        
+        await authClient.signOut(); 
+        window.location.href = "/sign-in"; 
+      }); 
+  </script>
+</Layout>

@@ -1,0 +1,126 @@
+---
+import '../styles/global.css';
+import styles from "virtual:astro:image-styles.css";
+import Layout from '../layouts/Layout.astro';
+
+// const genAI = new GoogleGenerativeAI(import.meta.env.GEMINI_API_KEY);
+// const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+// const prompt = "Explain Astro web framework in 2 sentences.";
+// const result = await model.generateContent(prompt);
+// const response = await result.response;
+// const text = response.text();
+
+
+export const prerender = false;
+
+if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
+
+---
+
+<Layout title="Chat">
+  <main class="relative z-10 flex h-fit w-full flex-col items-center justify-start pt-24 px-4 pb-12">
+    
+<div 
+  id="response-box" 
+  class="bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 ..."
+>
+  <div class="bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 border-gray-200 dark:border-zinc-700 ...">
+     AI Response here
+  </div>
+</div>
+    <div class="text-gray-900 italic">How can I help you today?</div>
+  </div>
+
+  <div class="relative group bg-white rounded-2xl shadow-lg border-2 border-gray-100 transition-all duration-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100/50">
+    <div class="flex items-center p-2">
+
+      <div class="bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 focus-within:border-blue-500 ...">
+
+      <textarea 
+        id="prompt" 
+        rows="1"
+        placeholder="Ask Gemini..." 
+        class="bg-transparent text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 ..."
+      ></textarea>
+
+</div>
+
+      <button 
+        id="send-btn" 
+        class="flex items-center justify-center p-3 bg-blue-600 text-white rounded-xl transition-all duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <svg id="send-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  </main>
+<script>
+  const promptInput = document.getElementById('prompt') as HTMLTextAreaElement;
+  const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
+  const responseBox = document.getElementById('response-box');
+
+  async function handleSend() {
+    const prompt = promptInput.value.trim();
+    if (!prompt || sendBtn.disabled) return;
+
+    // 1. Enter Loading State
+    sendBtn.disabled = true;
+    sendBtn.classList.add('opacity-50');
+    if (responseBox) {
+      responseBox.innerHTML += `<div class="mb-4 text-right"><span class="inline-block bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none shadow-sm">${prompt}</span></div>`;
+      responseBox.scrollTop = responseBox.scrollHeight;
+    }
+    promptInput.value = '';
+
+    try {
+      // 2. Call our Astro API route
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await res.json();
+
+      if (responseBox) {
+        if (res.ok) {
+          responseBox.innerHTML += `<div class="mb-4 text-left"><span class="inline-block bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-tl-none border border-gray-200">${data.text}</span></div>`;
+        } else {
+          responseBox.innerHTML += `<div class="text-red-500 text-sm italic">Error: ${data.error}</div>`;
+        }
+      }
+    } catch (err) {
+      if (responseBox) responseBox.innerHTML += `<div class="text-red-500 text-sm italic">Connection failed.</div>`;
+    } finally {
+      // 3. Reset State
+      sendBtn.disabled = false;
+      sendBtn.classList.remove('opacity-50');
+      responseBox!.scrollTop = responseBox!.scrollHeight;
+    }
+  }
+
+  // Event Listeners
+  sendBtn?.addEventListener('click', handleSend);
+  
+  promptInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+</script>
