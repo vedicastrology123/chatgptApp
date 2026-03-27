@@ -1,58 +1,102 @@
-export const prerender = false;
+import type { APIRoute } from "astro";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaPostgresAdapter } from "@prisma/adapter-ppg";
+import dotenv from 'dotenv';
+dotenv.config();
 
-import type { APIRoute } from 'astro';
+// 1. Singleton pattern for Prisma Postgres (2026 Driver)
+let prisma: PrismaClient;
+
+function getPrisma() {
+  if (!prisma) {
+    const adapter = new PrismaPostgresAdapter({ 
+      connectionString: process.env.DATABASE_URL || "" 
+    });
+    prisma = new PrismaClient({ adapter });
+  }
+  return prisma;
+}
+
+const apiKey = process.env.GEMINI_API_KEY;
+
+// 2. Add a Hard Guard: If the key is missing, crash with a helpful 500
+if (!apiKey) {
+  throw new Error("GEMINI_API_KEY is not defined in environment variables.");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { prompt } = await request.json();
+    // --- 2. Safe Body Parsing ---
+    const body = await request.json().catch(() => ({})); 
+    const prompt = body?.prompt;
+    const rawUserId = body?.userId;
 
-    // --- MOCK MODE: Toggle this to 'true' for testing ---
-    const MOCK_MODE = true; 
-
-    if (MOCK_MODE) {
-      // Simulate a 1-second "Thinking..." delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      return new Response(JSON.stringify({ 
-        text: `[MOCK] I received your prompt: "${prompt}". This is a fake response to save API credits!` 
-      }), { status: 200 });
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: "No prompt provided" }), { status: 400 });
     }
 
-    // ... your real Gemini API logic starts below here ...
-  } catch (error) {
-    return new Response(JSON.stringify({ error: "Server Error" }), { status: 500 });
+    // --- 3. The "toString" Crash Fix ---
+    // Instead of String(userId), we use a safe fallback
+    const userId = rawUserId ? String(rawUserId) : "guest-session";
+
+    const db = getPrisma();
+
+    // --- 4. Database Logic ---
+    let queryCount = 0;
+    
+    // Only query DB if it's not the generic guest session
+    if (userId !== "guest-session" && userId !== "current-session-id") {
+      const user = await db.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: { id: userId, queryCount: 0 },
+        select: { queryCount: true }
+      });
+      queryCount = user.queryCount;
+    }
+
+    if (queryCount >= 3) {
+      return new Response(JSON.stringify({ error: "Free limit reached" }), { status: 403 });
+    }
+
+    // --- 5. Gemini Integration ---
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const result = await model.generateContentStream(prompt);
+
+    // Increment count if user is logged in
+    if (userId !== "guest-session" && userId !== "current-session-id") {
+      await db.user.update({
+        where: { id: userId },
+        data: { queryCount: { increment: 1 } }
+      });
+    }
+
+    // --- 6. Streaming Output ---
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const chunk of result.stream) {
+            controller.enqueue(encoder.encode(chunk.text()));
+          }
+        } catch (e) {
+          console.error("Stream Error:", e);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" }
+    });
+
+  } catch (error: any) {
+    console.error("CRITICAL ERROR:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 };
-
-// export const POST: APIRoute = async ({ request }) => {
-//   try {
-//     const { prompt } = await request.json();
-//     const API_KEY = import.meta.env.GEMINI_API_KEY;
-
-//     if (!API_KEY) {
-//       return new Response(JSON.stringify({ error: "API Key missing" }), { status: 500 });
-//     }
-
-//     // Gemini API call
-//     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-//     const response = await fetch(url, {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({
-//         contents: [{ parts: [{ text: prompt }] }]
-//       }),
-//     });
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       return new Response(JSON.stringify({ error: data.error?.message || "Gemini Error" }), { status: response.status });
-//     }
-
-//     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
-//     return new Response(JSON.stringify({ text: aiText }), { status: 200 });
-
-//   } catch (error) {
-//     return new Response(JSON.stringify({ error: "Server Error" }), { status: 500 });
-//   }
-// };

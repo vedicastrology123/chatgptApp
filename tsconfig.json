@@ -1,5 +1,15 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@prisma/client": ["src/generated/prisma/client.ts"]
+    }
+  },
+  "include": [
+    ".astro/types.d.ts", 
+    "**/*", 
+    "src/generated/prisma/client.ts"
+  ],
   "exclude": ["dist"]
 }
