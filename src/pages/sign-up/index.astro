@@ -1,15 +1,16 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import '../../styles/global.css';
-
 export const prerender = false;
 
 // Redirect if already logged in
-if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
+if (Astro.locals.user?.id) return Astro.redirect("/chat");
+
+import Layout from "../../layouts/Layout.astro";
+import '../../styles/global.css';
+
 ---
 
 <Layout title="Sign Up">
-<main class="relative z-10 flex h-auto w-full flex-col items-center justify-start pt-12 pb-20 px-4 mt-1">
+<main class="relative z-10 flex h-auto w-full flex-col items-center justify-start pt-24 pb-20 px-4 mt-1">
     
     <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
       <h1 class="text-2xl font-bold text-gray-900 mb-2 text-center">Create Account</h1>
@@ -23,7 +24,11 @@ if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
             name="name" 
             placeholder="John Doe" 
             required 
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+            class="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700/50 
+         bg-zinc-50 dark:bg-zinc-800/50 
+         text-zinc-900 dark:text-white 
+         focus:bg-white dark:focus:bg-zinc-900 
+         transition-colors duration-200"
           />
         </div>
 
@@ -34,7 +39,11 @@ if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
             name="email" 
             placeholder="name@example.com" 
             required 
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+            class="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700/50 
+         bg-zinc-50 dark:bg-zinc-800/50 
+         text-zinc-900 dark:text-white 
+         focus:bg-white dark:focus:bg-zinc-900 
+         transition-colors duration-200"
           />
         </div>
 
@@ -45,10 +54,21 @@ if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
             type="password" 
             name="password" 
             placeholder="••••••••" 
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+            class="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700/50 
+         bg-zinc-50 dark:bg-zinc-800/50 
+         text-zinc-900 dark:text-white 
+         focus:bg-white dark:focus:bg-zinc-900 
+         transition-colors duration-200"
           />
         </div>
 
+        <button type="submit" id="signup-btn" class="w-full py-3 px-4 rounded-xl 
+  bg-blue-600 hover:bg-blue-700 
+  text-white font-semibold 
+  transition-all duration-200 
+  dark:bg-blue-500 dark:text-white">
+  Create Account
+</button>
         <button type="submit" id="signup-btn" class="btn-gradient w-full justify-center mt-2 font-semibold">
           Create Account
         </button>
@@ -116,7 +136,7 @@ if (Astro.locals.user?.id) return Astro.redirect("/dashboard");
           btn.innerText = "Create Account";
         } else {
           // Success! Better Auth usually logs the user in automatically
-          window.location.href = "/dashboard";
+          window.location.href = "/chat";
         }
       });
   </script>

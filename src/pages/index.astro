@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
+import ChatInterface from "../components/ChatInterface.astro";
 
 export const prerender = false;
 const user = Astro.locals.user;
@@ -8,4 +9,5 @@ const user = Astro.locals.user;
 
 <Layout title="Home">
   <Hero user={user} />
+  <ChatInterface />
 </Layout>

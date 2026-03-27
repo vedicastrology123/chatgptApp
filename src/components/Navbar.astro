@@ -3,7 +3,7 @@ const { user } = Astro.locals;
 // const user = { name: "John Doe", image: null }; // Manual test
 // Helper to get the first letter of the user's name
 const initials = user?.name ? user.name.charAt(0).toUpperCase() : "U";
-
+const firstName = user?.name?.split(' ')[0] || "Friend";
 
 ---
 
@@ -14,10 +14,18 @@ const initials = user?.name ? user.name.charAt(0).toUpperCase() : "U";
       <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-[#3245ff] to-[#bc52ee] shadow-sm transition-transform group-hover:scale-110"></div>
       <span>Astro Auth</span>
     </a>
-
+<div class="flex items-center gap-4">
+    {user && (
+      <span class="text-sm font-semibold text-black bg-zinc-100 px-3 py-1 rounded-full flex items-center gap-2">
+        Welcome back, {firstName} <span class="text-base">😊</span>
+      </span>
+    )}
+    
+    </div>
     <div class="flex items-center gap-6">
       {user ? (
         <div class="flex items-center gap-4">
+          <a href="/chat" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Chat</a>
           <a href="/dashboard" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Dashboard</a>
           
           <div class="h-4 w-[1px] bg-gray-200"></div>
@@ -25,7 +33,7 @@ const initials = user?.name ? user.name.charAt(0).toUpperCase() : "U";
           <div class="flex items-center gap-3 pl-2">
             <div class="flex flex-col items-end hidden md:flex">
               <span class="text-xs font-semibold text-gray-900 leading-none">{user.name}</span>
-              <button id="nav-signout-btn" class="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-700 transition-colors mt-1">
+              <button id="signOutButton" class="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-700 transition-colors mt-1">
                 Sign Out
               </button>
             </div>
@@ -41,49 +49,84 @@ const initials = user?.name ? user.name.charAt(0).toUpperCase() : "U";
         </div>
       ) : (
         <div class="flex items-center gap-5">
-          <a href="/sign-in" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Sign In</a>
-          <a href="/sign-up" class="btn-gradient px-5 py-2 text-sm font-semibold shadow-md active:scale-95">Sign Up</a>
+          <a 
+            href="/sign-in" 
+            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
+                  /* LIGHT MODE: White text on dark button */
+                  bg-zinc-900 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/30
+                  /* DARK MODE: Dark text on light button */
+                  dark:bg-white dark:text-zinc-900 dark:hover:bg-blue-500 dark:hover:text-white dark:hover:shadow-blue-400/20"
+          >
+            Sign In
+          </a>
+          <a 
+            href="/sign-up" 
+            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
+                  /* LIGHT MODE: White text on dark button */
+                  bg-zinc-900 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/30
+                  /* DARK MODE: Dark text on light button */
+                  dark:bg-white dark:text-zinc-900 dark:hover:bg-blue-500 dark:hover:text-white dark:hover:shadow-blue-400/20"
+          >
+            Sign Up
+          </a>
         </div>
       )}
-      <button 
-    id="theme-toggle" 
-    class="p-2 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 hover:scale-110 active:scale-95 transition-all duration-200"
+<button id="theme-toggle" class="p-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all hover:scale-110 active:scale-95 shadow-sm">
+  <span 
+    id="theme-icon" 
+    class="block text-xl" 
+    style="color: initial !important; text-shadow: none !important; -webkit-text-fill-color: initial !important;"
   >
-    <span id="theme-icon" class="text-xl">🌙</span>
-  </button>
+    </span>
+</button>
     </div>
   </div>
 </nav>
 
 <script>
-  import { authClient } from "../lib/auth-client";
+  function initThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
 
-  const signOutBtn = document.getElementById("nav-signout-btn");
-  if (signOutBtn) {
-    signOutBtn.addEventListener("click", async () => {
-      await authClient.signOut();
-      window.location.href = "/sign-in";
+    const updateIcon = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (themeIcon) {
+        // Use these specific emoji strings
+        themeIcon.textContent = isDark ? '☀️' : '🌙';
+      }
+    };
+
+    // Run immediately when this function is called
+    updateIcon();
+
+    // Attach the click listener if the button exists
+    themeToggle?.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateIcon();
     });
   }
+
+  // FIRE ON LOAD: This ensures it runs on Index, Sign-In, and Sign-Up
+  initThemeToggle();
+
+  // FIRE ON NAVIGATION: If you use Astro Transitions, add this:
+  document.addEventListener('astro:after-swap', initThemeToggle);
 </script>
 
-<script>
-  const themeToggle = document.getElementById('theme-toggle');
-  const themeIcon = document.getElementById('theme-icon');
-  const html = document.documentElement;
 
-  // Check for saved theme or system preference
-  const currentTheme = localStorage.getItem('theme') || 
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-  if (currentTheme === 'dark') {
-    html.classList.add('dark');
-    themeIcon!.innerText = '☀️';
-  }
-
-  themeToggle?.addEventListener('click', () => {
-    const isDark = html.classList.toggle('dark');
-    themeIcon!.innerText = isDark ? '☀️' : '🌙';
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  });
-</script>
+  <script>
+    import { authClient } from "../lib/auth-client"; 
+    
+    document 
+      .getElementById("signOutButton") 
+      ?.addEventListener("click", async () => {
+        const btn = document.getElementById("signOutButton") as HTMLButtonElement;
+        btn.disabled = true;
+        btn.innerText = "Signing out...";
+        
+        await authClient.signOut(); 
+        window.location.href = "/sign-in"; 
+      }); 
+  </script>

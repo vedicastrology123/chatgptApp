@@ -6,19 +6,83 @@
   --code-bg: linear-gradient(66.77deg, #f3cddd 0%, #f5cee7 100%);
 }
 
-@layer base {
+/* @layer base {
+  /* LIGHT MODE (DEFAULT) 
   html {
-    @apply m-0 p-0 h-full w-full;
-    font-family: Inter, Roboto, sans-serif;
+    background-color: white !important;
+    color: #111827 !important;
   }
+
+  /* DARK MODE (OVERRIDE) 
+  html.dark {
+    background-color: #09090b !important;
+    color: #f4f4f5 !important;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+    background-color: inherit;
+    color: inherit;
+    min-height: 100vh;
   }
-  
-  /* Apply dark mode body color */
-  .dark body {
-    @apply bg-zinc-950 text-zinc-100;
+} */
+
+@layer base {
+  /* 1. LIGHT MODE (DEFAULT) */
+  :root {
+    --bg-color: #ffffff;
+    --text-color: #111827;
   }
+
+  /* 2. DARK MODE (OVERRIDE) */
+  html.dark {
+    --bg-color: #09090b; /* zinc-950 */
+    --text-color: #f4f4f5; /* zinc-100 */
+  }
+
+  /* 3. APPLICATION */
+  html {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    /* Smooth 'Morph' transition */
+    transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
+  /* Standard Modern Sans-Serif Stack */
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 16px; /* Sets the global 1rem to 16px */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply min-h-screen bg-inherit text-inherit;
+    margin: 0;
+    @apply text-base leading-relaxed;
+    font-size: 1rem;
+  }
+
+  /* 4. CHAT BUBBLE TWEAKS (Ensures they look good in both modes) */
+  #response-box {
+    @apply transition-colors duration-300;
+  }
+
+  /* Smooth scrollbar for the Chat */
+  #response-box::-webkit-scrollbar {
+    width: 6px;
+  }
+  #response-box::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 dark:bg-zinc-800 rounded-full;
+  }
+}
+
+#prompt {
+  overflow-y: hidden; /* Hide scrollbar until it hits the max-height */
+  min-height: 44px;   /* Matches your initial row="1" height */
+  line-height: 1.5;
+  transition: height 0.1s ease-out; /* Makes the expansion feel fluid */
+}
+
+/* Show scrollbar only when we hit the cap */
+#prompt:focus {
+  overflow-y: auto;
 }
 
 /* Smooth scrollbar for the response box */
@@ -30,28 +94,18 @@
 }
 
 @layer components {
-  .btn-gradient {
-    @apply flex items-center rounded-[10px] px-4 py-2.5 text-white no-underline transition-all duration-200;
-    background: var(--brand-gradient);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.24);
+  /* This ensures the AI's paragraphs are exactly the same size as your UI */
+  .prose p, 
+  .prose li, 
+  .prose strong, 
+  .prose span {
+    @apply text-base leading-relaxed;
+    font-size: 1rem !important; 
   }
 
-  .btn-gradient:hover {
-    @apply text-gray-200 shadow-none scale-[0.98];
-  }
-
-  .text-gradient-clip {
-    background: var(--text-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: inline-block;
-  }
-
-  .code-pill {
-    @apply inline-block rounded-lg border border-transparent px-2 py-1.5;
-    background: var(--code-bg) padding-box, 
-                linear-gradient(155deg, #d83333 0%, #f041ff 18%, #f5cee7 45%) border-box;
+  /* Match the font family specifically for the prose block */
+  .prose {
+    font-family: inherit;
   }
 }
 
@@ -59,4 +113,30 @@
   .bg-blur-hero {
     @apply fixed inset-0 -z-10 h-full w-full blur-[100px] bg-slate-50;
   }
+}
+
+nav {
+  position: relative;
+  z-index: 50; /* Higher than the Chat component */
+}
+
+#theme-icon {
+  /* Force it to be visible against the background */
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure the button doesn't have a background that hides the moon */
+html.dark #theme-toggle {
+  @apply bg-zinc-950 border-zinc-800;
+}
+
+/* Optional: Add a 'Glow' behind the sun/moon so it doesn't look like a flat circle */
+#theme-toggle:hover #theme-icon {
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5)); /* Gold glow for sun */
+}
+
+html.dark #theme-toggle:hover #theme-icon {
+  filter: drop-shadow(0 0 8px rgba(147, 197, 253, 0.5)); /* Blue glow for moon */
 }

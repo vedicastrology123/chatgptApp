@@ -8,16 +8,6 @@ export const prerender = false;
 // 1. TEMPORARILY COMMENT THIS OUT:
 if (!Astro.locals.user?.id) return Astro.redirect("/sign-in");
 
-// 2. MOCK THE USER DATA:
-// const user = {
-//   id: "user_123456789",
-//   name: "Alex Developer",
-//   email: "alex@example.com",
-//   image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-//   emailVerified: true,
-//   createdAt: new Date()
-// };
-
 const user = Astro.locals.user;
 ---
 
@@ -31,12 +21,6 @@ const user = Astro.locals.user;
           <h1 class="text-2xl font-bold text-gray-900">User Dashboard</h1>
           <p class="text-sm text-gray-500">Manage your account and view profile data</p>
         </div>
-        <button 
-          id="signOutButton"
-          class="px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors active:scale-95"
-        >
-          Sign Out
-        </button>
       </div>
 
       <div class="p-8">
@@ -65,18 +49,4 @@ const user = Astro.locals.user;
     </div>
   </main>
 
-  <script>
-    import { authClient } from "../../lib/auth-client"; 
-    
-    document 
-      .getElementById("signOutButton") 
-      ?.addEventListener("click", async () => {
-        const btn = document.getElementById("signOutButton") as HTMLButtonElement;
-        btn.disabled = true;
-        btn.innerText = "Signing out...";
-        
-        await authClient.signOut(); 
-        window.location.href = "/sign-in"; 
-      }); 
-  </script>
 </Layout>

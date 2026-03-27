@@ -8,7 +8,7 @@ const connectionString = import.meta.env.DATABASE_URL || process.env.DATABASE_UR
 if (!connectionString) {
   throw new Error("DATABASE_URL is missing from environment variables!");
 }
-console.log("URL is:", connectionString);
+//console.log("URL is:", connectionString);
 const pool = new pg.Pool({ 
   connectionString,
   ssl: { rejectUnauthorized: false } // Crucial for cloud DBs
