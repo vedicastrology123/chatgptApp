@@ -35,6 +35,16 @@ export const POST: APIRoute = async ({ request }) => {
     const prompt = body?.prompt;
     const rawUserId = body?.userId;
 
+// 1. Check if we are in Mock Mode
+  if (import.meta.env.PUBLIC_MOCK_MODE === 'true') {
+    // Artificial delay to simulate "thinking"
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return new Response(JSON.stringify({
+      text: `[MOCK MODE] I received your message: "${body}". The Gemini API is currently resting until 12:30 PM IST.`
+    }), { status: 200 });
+  }
+
     if (!prompt) {
       return new Response(JSON.stringify({ error: "No prompt provided" }), { status: 400 });
     }
@@ -75,7 +85,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // --- 6. Streaming Output ---
+// --- 6. Streaming Output ---   
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -92,11 +102,23 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     return new Response(stream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" }
+       headers: { "Content-Type": "text/plain; charset=utf-8" }
     });
+    
 
-  } catch (error: any) {
-    console.error("CRITICAL ERROR:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    // FOR TESTING THE AMBER BOX: 
+        // Return a plain 429 status with no body. 
+        // This triggers the 'if (response.status === 429)' block in ChatInterface.astro.
+        //return new Response(null, { status: 429 });
+
+} catch (error: any) {
+  // Check if the error from Google is a Quota/Rate Limit error
+  if (error.message?.includes("429") || error.status === 429) {
+    console.warn("Gemini Quota Hit: Returning 429 to frontend.");
+    return new Response(null, { status: 429 }); // This triggers the Amber Box!
   }
+
+  console.error("CRITICAL ERROR:", error.message);
+  return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+}
 };

@@ -12,8 +12,16 @@ import Layout from '../layouts/Layout.astro';
 import ChatInterface from '../components/ChatInterface.astro';
 import Hero from '../components/Hero.astro';
 
+const isMock = import.meta.env.PUBLIC_MOCK_MODE === 'true';
 ---
 <Layout title="Chat Page">
     <Hero user={user} />
   <ChatInterface />
+  <div class="relative">
+  {isMock && (
+    <span class="absolute -top-6 right-0 text-[10px] font-bold tracking-widest text-orange-500 uppercase">
+      Offline Development Mode
+    </span>
+  )}
+  </div>
 </Layout>

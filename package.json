@@ -6,7 +6,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "prisma generate && astro dev",
+    "pdev": "prisma generate && astro dev",
+    "dev": "astro dev",
     "build": "prisma generate && astro build",
     "preview": "astro preview",
     "astro": "astro"

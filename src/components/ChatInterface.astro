@@ -49,14 +49,17 @@ export const prerender = false;
     </div>
   </main>
 
-<div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm">
+  <div id="auth-modal" 
+     class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm transition-opacity duration-300">
+
+<!-- <div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm"> -->
   <div class="bg-white dark:bg-zinc-950 p-8 rounded-3xl shadow-2xl max-w-sm w-[90%] text-center border border-zinc-200 dark:border-zinc-800">
     <div class="text-4xl mb-4">✨</div>
     <h3 class="text-xl font-bold text-black dark:text-white mb-2">Limit Reached</h3>
     <p class="text-zinc-500 text-sm mb-6">Sign in to unlock unlimited messages!</p>
     
     <div class="flex flex-col gap-3">
-      <a href="/sign-in" class="py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700">Sign In</a>
+      <a href="/sign-in" data-astro-prefetch="false" class="py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700">Sign In</a>
       <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="text-zinc-400 text-sm">Maybe later</button>
     </div>
   </div>
@@ -74,77 +77,154 @@ export const prerender = false;
 </div> -->
 
 <script>
-  // 1. Element Selectors
-  const sendBtn = document.getElementById('send-btn');
-  const chatInput = document.getElementById('chat-input') as HTMLTextAreaElement;
-  const responseBox = document.getElementById('response-box');
-  const authModal = document.getElementById('auth-modal');
+// 1. Initialize DOM Elements
+const responseBox = document.getElementById('response-box');
+const chatInput = document.getElementById('chat-input') as HTMLTextAreaElement;
+const sendBtn = document.getElementById('send-btn');
+const authModal = document.getElementById('auth-modal');
 
-  // 2. Auto-resize Textarea as user types
-  chatInput?.addEventListener('input', () => {
-    chatInput.style.height = 'auto';
-    chatInput.style.height = chatInput.scrollHeight + 'px';
-  });
+// Add this at the very top of your script tag
+if (import.meta.env.DEV) {
+  // Check if we already reset during this browser session
+  if (!sessionStorage.getItem('dev_reset_performed')) {
+    localStorage.removeItem('guest_chat_count');
+    sessionStorage.setItem('dev_reset_performed', 'true');
+    console.log("🛠️ Dev Mode: Guest chat count reset to 0 for this session.");
+  }
+}
 
-  // 3. Main Send Logic
-  const handleSend = async () => {
-    const prompt = chatInput.value.trim();
-    if (!prompt) return;
+// --- TEMPORARY TESTING RESET ---
+// if (import.meta.env.DEV) {
+//     // This will force the count to 0 EVERY time you refresh the page 
+//     // while you are working on the UI.
+//     localStorage.setItem('guest_chat_count', '0');
+//     console.log("🛠️ Dev Mode: Count FORCED to 0 for testing.");
+// }
 
-    // Clear UI for new message
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    responseBox!.innerHTML = '<div class="text-blue-500 animate-pulse">Gemini is thinking...</div>';
-    
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt,
-          userId: "current-session-id" // Replace with your actual session/auth ID
-        })
-      });
+const handleSend = async () => {
+  if (!chatInput || !responseBox) return;
 
-      // 4. Handle "Limit Reached" (403 Forbidden)
-      if (response.status === 403) {
-        responseBox!.innerHTML = '<div class="text-gray-400 italic">How can I help you today?</div>';
-        authModal?.classList.remove('hidden');
-        return;
-      }
+  const prompt = chatInput.value.trim();
+  if (!prompt) return;
 
-      if (!response.ok) throw new Error('Failed to connect to Gemini');
+  // --- STAGE 1: GUEST LIMIT CHECK ---
 
-      // 5. Handle Real-time Streaming
-      responseBox!.innerHTML = ''; // Clear "thinking" state
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+  const currentCount = parseInt(localStorage.getItem('guest_chat_count') || '0', 10);
 
-      while (true) {
-        const { done, value } = await reader!.read();
-        if (done) break;
+  // 1. Pre-check: Is the user ALREADY at the limit?
+  if (currentCount >= 3) {
+    authModal?.classList.remove('hidden');
+    return;
+  }
 
-        const chunk = decoder.decode(value, { stream: true });
-        
-        // Append text chunk and scroll to bottom
-        const textNode = document.createTextNode(chunk);
-        responseBox?.appendChild(textNode);
-        responseBox!.scrollTop = responseBox!.scrollHeight;
-      }
 
-    } catch (err) {
-      console.error(err);
-      responseBox!.innerHTML = '<div class="text-red-500">Sorry, something went wrong. Please try again.</div>';
+  // --- STAGE 2: UI PREPARATION ---
+  // Clear the "you today?" text if it's the first message
+if (responseBox.innerHTML.includes("How can I help you today?") || responseBox.children.length === 0) {
+  responseBox.innerHTML = ''; 
+}
+
+  // Clear input field
+  chatInput.value = '';
+  chatInput.style.height = 'auto';
+
+  // Add the Tailwind 4 Typing Indicator
+  const typingId = 'typing-' + Date.now();
+  const typingHTML = `
+    <div id="${typingId}" class="flex items-center gap-1.5 p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit mb-4 animate-in fade-in duration-300">
+      <span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+      <span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+      <span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></span>
+    </div>
+  `;
+  responseBox.insertAdjacentHTML('beforeend', typingHTML);
+  responseBox.scrollTop = responseBox.scrollHeight;
+
+  try {
+    // --- STAGE 3: API CALL ---
+
+// --- STAGE 3: API CALL ---
+const response = await fetch('/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt })
+});
+
+// 1. Handle Google Gemini Quota (429) - Reset at 12:30 PM
+if (response.status === 429) {
+  document.getElementById(typingId)?.remove();
+  
+  // Cleanly wipe the response box if the welcome message is still there 
+  if (responseBox.innerText.includes("How can I help")) {
+    responseBox.innerHTML = '';
+  }
+
+  const quotaHTML = `
+    <div class="flex flex-col items-center p-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl mb-4 text-center mx-4 shadow-sm animate-in fade-in zoom-in duration-300">
+      <div class="text-amber-500 mb-2">⏳</div>
+      <span class="text-amber-600 dark:text-amber-400 font-bold text-sm mb-1">Google Quota Limit Reached</span>
+      <p class="text-amber-700 dark:text-amber-300 text-[11px] leading-relaxed max-w-[200px]">
+        The free Gemini API resets daily. <br/> 
+        Service resumes at <span class="font-bold underline text-amber-600">12:30 PM IST</span>. [cite: 26]
+      </p>
+    </div>
+  `;
+  
+  responseBox.insertAdjacentHTML('beforeend', quotaHTML); // [cite: 27]
+  responseBox.scrollTo({ top: responseBox.scrollHeight, behavior: 'smooth' }); // [cite: 27]
+  return; 
+}
+
+// 2. Handle Forbidden (403) or other auth issues
+if (response.status === 403) {
+  document.getElementById(typingId)?.remove();
+  authModal?.classList.remove('hidden');
+  return;
+}
+
+if (!response.ok) throw new Error('Failed to connect');
+
+
+
+    // --- STAGE 4: SUCCESS & STREAMING ---
+    // Increment the count now that we know the request worked
+    localStorage.setItem('guest_chat_count', (currentCount + 1).toString());
+
+    // Remove typing indicator and prepare text container
+    document.getElementById(typingId)?.remove();
+    const messageDiv = document.createElement('div');
+    messageDiv.className = "mb-6 text-zinc-800 dark:text-zinc-200 leading-relaxed text-sm antialiased border-l-2 border-blue-500 pl-4";
+    responseBox.appendChild(messageDiv);
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader!.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      messageDiv.append(chunk);
+      responseBox.scrollTop = responseBox.scrollHeight;
     }
-  };
 
-  // 6. Event Listeners
-  sendBtn?.addEventListener('click', handleSend);
+  } catch (err) {
+    console.error(err);
+    document.getElementById(typingId)?.remove();
+    responseBox.insertAdjacentHTML('beforeend', 
+      '<div class="text-red-500 text-xs mb-4">Something went wrong. Please try again.</div>'
+    );
+  }
+};
 
-  chatInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  });
+// --- STAGE 5: EVENT LISTENERS ---
+sendBtn?.addEventListener('click', handleSend);
+
+chatInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
 </script>
+
